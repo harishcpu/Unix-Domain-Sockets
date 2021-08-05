@@ -4,6 +4,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include "color.h"
 
 #define SOCKET_NAME "/tmp/DemoSocket"
 #define BUFFER_SIZE 128
@@ -14,14 +15,12 @@ int monitored_fd_set[MAX_CLIENT_SUPPORTED];
 
 int client_result[MAX_CLIENT_SUPPORTED];
 
-static void 
-initialize_monitor_fd_set() {
+static void initialize_monitor_fd_set() {
 	for(int i = 0; i < MAX_CLIENT_SUPPORTED; i++)
 		monitored_fd_set[i] = -1;
 }
 
-static void 
-add_to_monitored_fd_set(int skt_fd) {
+static void add_to_monitored_fd_set(int skt_fd) {
 	for(int i = 0; i < MAX_CLIENT_SUPPORTED; i++) {
 		if(monitored_fd_set[i] != -1)
 			continue;
@@ -39,8 +38,7 @@ static void remove_from_monitored_fd_set(int skt_fd) {
 	}
 }
 
-static void
-refresh_fd_set(fd_set *fd_set_ptr) {
+static void refresh_fd_set(fd_set *fd_set_ptr) {
 	FD_ZERO(fd_set_ptr);
 	for(int i = 0; i < MAX_CLIENT_SUPPORTED; i++) {
 		if(monitored_fd_set[i] != -1) {
@@ -49,8 +47,7 @@ refresh_fd_set(fd_set *fd_set_ptr) {
 	}
 }
 
-static int
-get_max_fd() {
+static int get_max_fd() {
 	int max = -1;
 	for(int i = 0; i < MAX_CLIENT_SUPPORTED; i++) {
 		if(monitored_fd_set[i] > max)
@@ -118,12 +115,13 @@ int main(int argc, char *argv[]) {
 
 	/* add master socket to monitored set of FDs */
 	add_to_monitored_fd_set(connection_socket);
-
+	
+	int client_count = 0;
 	while(1) {
 		refresh_fd_set(&readfds);
 
 		/* wait for incoming connection request */
-		printf("waiting for accept() sys call\n");
+		printf("waiting for select() sys call\n");
 		
 		select(get_max_fd() + 1, &readfds, NULL, NULL, NULL);
 		
@@ -137,7 +135,7 @@ int main(int argc, char *argv[]) {
 				exit(EXIT_FAILURE);
 			}
 
-			printf("Connection accepted from client\n");
+			printf("Connection " BOLDGREEN "accepted" RESET " from " BOLDGREEN "client %d\n" RESET, ++client_count);
 
 			add_to_monitored_fd_set(data_socket);
 		} else {
